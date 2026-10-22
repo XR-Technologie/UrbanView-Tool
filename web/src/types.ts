@@ -1,4 +1,5 @@
 import { PI, normAng } from './engine/math';
+import type { TourPlan } from './plan';
 
 export interface View { yaw: number; pitch: number; fov: number }
 
@@ -15,10 +16,21 @@ export interface LinkHotspot {
 export interface InfoHotspot { id: string; type: 'info'; yaw: number; pitch: number; title: string; text: string; url: string }
 export type Hotspot = LinkHotspot | InfoHotspot;
 
+/** Position géographique. heading = cap (degrés, 0 = nord) du centre du panorama ; null = automatique. */
+export interface Geo { lat: number; lng: number; heading: number | null; alt?: number }
+
 export interface Scene {
+  /** Position sur la carte (Street View). */
+  geo?: Geo;
+  /** Date de prise de vue (ms). */
+  captureTime?: number;
+  /** Point du relevé (plan) correspondant à cette photo. */
+  planPoint?: string;
   id: string;
   name: string;
   media: string;
+  /** Photo d'origine conservée après retouche (pour revenir en arrière). */
+  originalMedia?: string;
   width: number;
   height: number;
   thumbV: number;
@@ -37,10 +49,21 @@ export interface TourSettings {
   autorotate: boolean;
 }
 
-export interface TourData { settings: TourSettings; startScene: string | null; scenes: Scene[] }
+export interface TourData {
+  settings: TourSettings;
+  startScene: string | null;
+  scenes: Scene[];
+  /** Relevé des emplacements fait sur place (appli téléphone). */
+  plan?: TourPlan;
+}
 export interface TourDoc { id: string; title: string; data: TourData; updatedAt?: number }
 export interface TourSummary { id: string; title: string; sceneCount: number; cover: string | null; updatedAt: number }
-export interface MediaInfo { id: string; name: string; width: number; height: number }
+export interface MediaInfo { id: string; name: string; width: number; height: number; geo?: Geo; captureTime?: number }
+
+export interface GoogleStatus { clientId: string; configured: boolean; connected: boolean }
+export interface SvJob { running: boolean; done: number; total: number; step: string; error?: string; log: string[]; finishedAt?: number }
+export interface SvPhoto { sceneId: string; photoId: string; media: string; status: string | null; shareLink: string | null; updatedAt: number }
+export interface SvState { job: SvJob | null; photos: SvPhoto[] }
 
 export const DEFAULT_VIEW: View = { yaw: 0, pitch: 0, fov: 75 };
 
@@ -63,6 +86,7 @@ export function normalizeDoc(doc: TourDoc): TourDoc {
       settings: { ...defaultSettings(), ...(d.settings ?? {}) },
       startScene: d.startScene ?? null,
       scenes: (d.scenes ?? []).map(s => ({ ...s, thumbV: s.thumbV ?? 0, view: { ...DEFAULT_VIEW, ...s.view }, hotspots: s.hotspots ?? [] })),
+      ...(d.plan ? { plan: { ...d.plan, lensOffset: d.plan.lensOffset ?? 0, anchor: d.plan.anchor ?? null } } : {}),
     },
   };
 }

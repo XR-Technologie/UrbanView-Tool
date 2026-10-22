@@ -1,0 +1,54 @@
+# Publie l'appli de relevé (téléphone) sur GitHub Pages — HTTPS obligatoire pour la réalité augmentée.
+# Une seule fois : Settings → Pages → Source = « GitHub Actions ».
+name: Appli de relevé
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'web/src/capture/**'
+      - 'web/src/plan.ts'
+      - 'web/src/geo.ts'
+      - 'web/capture.html'
+      - 'web/capture-public/**'
+      - 'web/vite.capture.config.ts'
+      - '.github/workflows/capture.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Appli de relevé
+        run: npm run build:capture
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist-capture
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

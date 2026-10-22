@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import exifr from 'exifr';
 import sharp from 'sharp';
-import { MEDIA_DIR } from './config.js';
+import { cfg } from './config.js';
 
 sharp.cache(false);
 
@@ -9,7 +10,7 @@ sharp.cache(false);
 export const VARIANTS = { full: 8192, mid: 4096, low: 1536 } as const;
 const THUMB = { w: 640, h: 360 };
 
-export const mediaDir = (id: string) => path.join(MEDIA_DIR, id);
+export const mediaDir = (id: string) => path.join(cfg.mediaDir, id);
 export const isSafeId = (id: string) => /^[\w-]{6,40}$/.test(id);
 
 /**
@@ -36,7 +37,27 @@ export async function processPanorama(id: string, input: Buffer) {
   await from().resize({ width: Math.min(fullW, VARIANTS.low) }).jpeg({ quality: 72, mozjpeg: true }).toFile(path.join(dir, 'low.jpg'));
   await makeThumb(id, 0, 0);
 
-  return { width: fullW, height: Math.round(height * fullW / width) };
+  return { width: fullW, height: Math.round(height * fullW / width), ...(await readPhotoMeta(input)) };
+}
+
+/** Position GPS, cap (XMP GPano) et date de prise de vue, si l'appareil les a enregistrés. */
+async function readPhotoMeta(input: Buffer) {
+  try {
+    const m = await exifr.parse(input, { gps: true, xmp: true, tiff: true, exif: true }) as Record<string, unknown> | undefined;
+    if (!m) return {};
+    const lat = Number(m.latitude), lng = Number(m.longitude);
+    const heading = Number(m.PoseHeadingDegrees);
+    const alt = Number(m.GPSAltitude);
+    const date = m.DateTimeOriginal ?? m.CreateDate;
+    return {
+      ...(Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng)
+        ? { geo: { lat, lng, heading: Number.isFinite(heading) ? heading : null, ...(Number.isFinite(alt) ? { alt } : {}) } }
+        : {}),
+      ...(date instanceof Date && !Number.isNaN(date.getTime()) ? { captureTime: date.getTime() } : {}),
+    };
+  } catch {
+    return {};
+  }
 }
 
 /** Vignette 16:9 recadrée autour d'une direction (yaw / pitch en radians). */

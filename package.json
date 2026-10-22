@@ -10,8 +10,12 @@
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web",
+    "build:capture": "npm run build:capture -w web",
     "start": "npm start -w server",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w web"
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
+    "desktop:install": "npm install --prefix desktop",
+    "desktop:start": "npm run build && npm start --prefix desktop",
+    "desktop:exe": "npm run build && npm run dist --prefix desktop"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

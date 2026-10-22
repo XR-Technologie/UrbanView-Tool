@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon';
 import { MiniPano } from '../components/MiniPano';
 import {
   arrivalFor, isLink, mediaUrl, sceneById,
-  type InfoHotspot, type LinkHotspot, type Scene, type TourData, type TourSettings,
+  type Geo, type InfoHotspot, type LinkHotspot, type Scene, type TourData, type TourSettings,
 } from '../types';
 
 export const URL_FOR = (m: string, v: string) => mediaUrl('/media', m, v);
@@ -136,7 +136,7 @@ export function InfoPanel({ h, edit, onDelete }: {
 /* ------------------------------------------------------------------ */
 /* Scène : nom + vues de départ (une par défaut + une par provenance) */
 /* ------------------------------------------------------------------ */
-export function ScenePanel({ data, scene, pv, isStart, rename, setDefaultView, editLink, onSetStart, onDelete }: {
+export function ScenePanel({ data, scene, pv, isStart, rename, setDefaultView, editLink, onSetStart, onDelete, heading, setGeo, onPlaceOnMap, onNorthHere }: {
   data: TourData;
   scene: Scene;
   pv: PanoView | null;
@@ -146,6 +146,10 @@ export function ScenePanel({ data, scene, pv, isStart, rename, setDefaultView, e
   editLink: (sceneId: string, hsId: string, fn: (h: LinkHotspot) => void) => void;
   onSetStart: () => void;
   onDelete: () => void;
+  heading: number | null;
+  setGeo: (fn: (g: Geo) => Geo | undefined) => void;
+  onPlaceOnMap: () => void;
+  onNorthHere?: () => void;
 }) {
   const incoming = data.scenes.flatMap(src =>
     src.hotspots.filter((h): h is LinkHotspot => isLink(h) && h.target === scene.id).map(h => ({ src, h })),
@@ -182,6 +186,31 @@ export function ScenePanel({ data, scene, pv, isStart, rename, setDefaultView, e
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="insp-sec">
+        <div className="insp-h">
+          Position
+          {scene.geo && scene.geo.heading == null && <span className="tag">{heading != null ? 'Cap auto' : 'Cap ?'}</span>}
+        </div>
+        {scene.geo ? (
+          <>
+            <div className="geo-row">
+              <Icon n="pin" />
+              <span>{scene.geo.lat.toFixed(6)}, {scene.geo.lng.toFixed(6)}</span>
+              <button className="ibtn sm" title="Retirer de la carte" onClick={() => setGeo(() => undefined)}><Icon n="close" /></button>
+            </div>
+            <Field label={`Cap · ${heading != null ? `${Math.round(heading)}°` : '—'}`}>
+              <input type="range" min={0} max={359} value={Math.round(heading ?? 0)} onChange={e => setGeo(g => ({ ...g, heading: +e.target.value }))} />
+            </Field>
+            <div className="row2" style={{ marginTop: 0 }}>
+              <button className="btn" disabled={!onNorthHere} onClick={onNorthHere} title="La vue actuelle regarde vers le nord"><Icon n="compass" />Nord ici</button>
+              <button className="btn" disabled={scene.geo.heading == null} onClick={() => setGeo(g => ({ ...g, heading: null }))} title="Cap déduit des ponts"><Icon n="wand" />Auto</button>
+            </div>
+          </>
+        ) : (
+          <button className="btn wide" style={{ marginTop: 0 }} onClick={onPlaceOnMap}><Icon n="pin" />Placer sur la carte</button>
+        )}
       </section>
 
       <section className="insp-sec">

@@ -1,0 +1,83 @@
+{
+  "name": "urbanview-360-desktop",
+  "productName": "Urbanview 360 XR",
+  "version": "1.0.0",
+  "description": "Studio de visites virtuelles 360° — Urbanview 360 XR",
+  "author": {
+    "name": "Urbanview 360",
+    "email": "xrtechnologie@gmail.com"
+  },
+  "private": true,
+  "main": "dist/main.cjs",
+  "scripts": {
+    "bundle": "node build.mjs",
+    "start": "npm run bundle && electron .",
+    "dist": "npm run bundle && electron-builder --win --x64",
+    "dist:linux": "npm run bundle && electron-builder --linux --x64"
+  },
+  "dependencies": {
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.25.0"
+  },
+  "build": {
+    "appId": "com.urbanview360.studio",
+    "productName": "Urbanview 360 XR",
+    "copyright": "© Urbanview 360",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "../web/dist", "to": "web" },
+      { "from": "../web/dist-player", "to": "player" }
+    ],
+    "asarUnpack": [
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Urbanview 360 XR",
+      "artifactName": "Urbanview-360-XR-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Urbanview-360-XR-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "executableName": "urbanview-360-xr",
+      "category": "Graphics",
+      "synopsis": "Studio de visites virtuelles 360°",
+      "maintainer": "Urbanview 360 <xrtechnologie@gmail.com>",
+      "target": [
+        { "target": "deb", "arch": ["x64"] },
+        { "target": "AppImage", "arch": ["x64"] }
+      ]
+    },
+    "deb": {
+      "artifactName": "urbanview-360-xr_${version}_amd64.${ext}"
+    },
+    "appImage": {
+      "artifactName": "Urbanview-360-XR-${version}-x86_64.${ext}"
+    }
+  }
+}

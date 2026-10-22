@@ -1,4 +1,4 @@
-import type { MediaInfo, TourData, TourDoc, TourSummary, View } from './types';
+import type { GoogleStatus, MediaInfo, SvState, TourData, TourDoc, TourSummary, View } from './types';
 
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const r = await fetch(url, {
@@ -24,6 +24,15 @@ export const api = {
   deleteMedia: (media: string) => req<{ ok: boolean }>('DELETE', `/api/media/${media}`),
   exportCheck: (id: string) => req<{ ok: boolean; error?: string }>('GET', `/api/tours/${id}/export?check=1`),
   exportUrl: (id: string) => `/api/tours/${id}/export`,
+
+  googleStatus: () => req<GoogleStatus>('GET', '/api/google/status'),
+  googleConfig: (clientId: string, clientSecret: string) => req<GoogleStatus>('PUT', '/api/google/config', { clientId, clientSecret }),
+  googleLogout: () => req<GoogleStatus>('POST', '/api/google/logout', {}),
+  googleAuthUrl: (returnTo: string) => `/api/google/auth?returnTo=${encodeURIComponent(returnTo)}`,
+  sv: (id: string) => req<SvState>('GET', `/api/tours/${id}/streetview`),
+  svPublish: (id: string, mode: 'all' | 'connections', headings: Record<string, number>) => req<SvState>('POST', `/api/tours/${id}/streetview`, { mode, headings }),
+  svRefresh: (id: string) => req<SvState>('POST', `/api/tours/${id}/streetview/refresh`, {}),
+  svUnpublish: (id: string) => req<SvState>('DELETE', `/api/tours/${id}/streetview`),
 
   upload(tourId: string, file: File, onProgress: (p: number) => void): Promise<MediaInfo> {
     return new Promise((resolve, reject) => {

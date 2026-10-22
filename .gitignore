@@ -2,4 +2,7 @@ node_modules/
 data/
 web/dist/
 web/dist-player/
+web/dist-capture/
+desktop/dist/
+desktop/release/
 *.log

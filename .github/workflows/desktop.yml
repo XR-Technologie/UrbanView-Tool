@@ -1,0 +1,68 @@
+# Fabrique le logiciel de bureau Urbanview 360 XR :
+#   Linux  → .deb + .AppImage   (machine Ubuntu)
+#   Windows → installateur .exe + portable
+# Déclenchement : bouton « Run workflow » dans l'onglet Actions, ou un tag « v1.0.0 » (crée une Release).
+name: Logiciel de bureau
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: --linux
+            files: |
+              desktop/release/*.deb
+              desktop/release/*.AppImage
+          - os: windows-latest
+            target: --win
+            files: |
+              desktop/release/*.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+
+      - name: Dépendances
+        run: |
+          npm ci
+          npm ci --prefix desktop
+
+      - name: Interface + lecteur
+        run: npm run build
+
+      - name: Paquets
+        working-directory: desktop
+        run: |
+          npm run bundle
+          npx electron-builder ${{ matrix.target }} --x64 --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: urbanview-360-xr-${{ runner.os }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.files }}

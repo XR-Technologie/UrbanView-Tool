@@ -3,8 +3,8 @@ import path from 'node:path';
 import archiver from 'archiver';
 import type { FastifyInstance } from 'fastify';
 import { nanoid } from 'nanoid';
-import { PLAYER_DIST } from './config.js';
-import { media, tours } from './db.js';
+import { cfg } from './config.js';
+import { media, svPhotos, tours } from './db.js';
 import { isSafeId, makeThumb, mediaDir, processPanorama, removeMedia } from './media.js';
 
 interface SceneLite { id: string; media: string; thumbV?: number }
@@ -63,6 +63,7 @@ export async function routes(app: FastifyInstance) {
   app.delete<IdParams>('/api/tours/:id', async req => {
     for (const m of media.byTour(req.params.id)) await removeMedia(m.id);
     media.removeByTour(req.params.id);
+    svPhotos.removeByTour(req.params.id);
     tours.remove(req.params.id);
     return { ok: true };
   });
@@ -102,7 +103,7 @@ export async function routes(app: FastifyInstance) {
   app.get<IdParams & { Querystring: { check?: string } }>('/api/tours/:id/export', async (req, reply) => {
     const row = tours.get(req.params.id);
     if (!row) return reply.code(404).send({ error: 'Visite introuvable' });
-    const playerHtml = path.join(PLAYER_DIST, 'player.html');
+    const playerHtml = path.join(cfg.playerDist, 'player.html');
     if (!fs.existsSync(playerHtml)) {
       const error = 'Lecteur non compilé : lancez « npm run build » puis réessayez.';
       return req.query.check ? { ok: false, error } : reply.code(400).send({ error });
@@ -112,7 +113,7 @@ export async function routes(app: FastifyInstance) {
     const data = JSON.parse(row.data);
     const archive = archiver('zip', { zlib: { level: 1 } });
     archive.on('warning', e => req.log.warn(e));
-    archive.glob('**/*', { cwd: PLAYER_DIST, ignore: ['player.html'] });
+    archive.glob('**/*', { cwd: cfg.playerDist, ignore: ['player.html'] });
     archive.file(playerHtml, { name: 'index.html' });
     archive.append(`window.__TOUR__=${JSON.stringify({ id: row.id, title: row.title, data }).replace(/</g, '\\u003c')};`, { name: 'tour.js' });
     for (const s of parseData(row.data).scenes) {
